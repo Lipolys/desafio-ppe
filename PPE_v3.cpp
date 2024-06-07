@@ -2,10 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
 #define MAX_LEN 500
 
 typedef char string[MAX_LEN];
 
+FILE* openFile(const char* fileName, const char *openingType) {
+    FILE *filePointer = fopen(fileName, openingType);
+    if (filePointer == NULL) {
+        printf("Unable to open file: %s\n", fileName);
+    } else {
+    	printf ("File %s opened successfully\n", fileName);
+	}
+    return filePointer;
+}
 
 /* function: iterateOverString 
 parameters: array of strings, array of doubles, an index
@@ -87,34 +97,34 @@ void clearVector(double *values){
 }
 
 int main () {
-    FILE *pointer = fopen("points.txt", "r");
+    FILE *pointsFile = NULL;
+    FILE *orderedPairsFile = NULL;
     string line[MAX_LEN];
     double values[6] = {NULL};
     double coefficients[3] = {0};
     int i = 0;
-    if (pointer == NULL) {
-        printf ("Unable to open file");
-    } else {
-        printf ("File opened successfully\n");
-        while (fgets(line[i], MAX_LEN - 1, pointer) != NULL){
-        	printf ("\n%s", line[i]);
+    pointsFile = openFile("points.txt", "r");
+    if (pointsFile){
+    	while (fgets(line[i], MAX_LEN - 1, pointsFile) != NULL){
+    		orderedPairsFile = openFile("orderedPairs.txt", "w");
         	iterateOverString(line, values, i);
         	double system[3][4] = {
 				{values[0] * values[0], values[0], 1, values[1]},
 				{values[2] * values[2], values[2], 1, values[3]},
 				{values[4] * values[4], values[4], 1, values[5]}
 			};
-			
-			
-			gaussElimination(system, coefficients);
-			for (int j = 0; j < 3; j++) {
-				printf ("%.6f ", coefficients[j]);
+			if (orderedPairsFile) {
+				for (int j = 0; j < 6; j++) {
+					fprintf (orderedPairsFile, "%.0f ", values[j]);
+					if (j % 2 != 0)	fprintf (orderedPairsFile, "\n");
+				}
+				fclose (orderedPairsFile);
 			}
-			printf ("\n");
+			gaussElimination(system, coefficients);
 			clearVector(values);
 			i++;
 		}
-        fclose (pointer);
+	    fclose (pointsFile);
     }
     return 0;
 }
