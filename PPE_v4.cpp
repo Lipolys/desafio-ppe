@@ -2,10 +2,31 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <windows.h>
 #define MAX_LEN 500
+#define LOCAL_DIR "cd \"C:\\Users\\lfeli\\OneDrive\\Área de Trabalho\\PPE\""
 
 typedef char string[MAX_LEN];
 
+FILE* openFile(const char* fileName, const char *openingType) {
+    FILE *filePointer = fopen(fileName, openingType);
+    if (filePointer == NULL) {
+        printf("Unable to open file: %s\n", fileName);
+    } else {
+    	printf ("File %s opened successfully\n", fileName);
+	}
+    return filePointer;
+}
+
+FILE *openPipe (const char* pipeName, const char *openingType) {
+    FILE *pipePointer = _popen(pipeName, openingType);
+    if (pipePointer == NULL) {
+        printf("Unable to open pipe: %s\n", pipeName);
+    } else {
+    	printf ("Pipe %s opened successfully\n", pipeName);
+	}
+    return pipePointer;
+}
 
 /* function: iterateOverString 
 parameters: array of strings, array of doubles, an index
@@ -87,34 +108,57 @@ void clearVector(double *values){
 }
 
 int main () {
-    FILE *pointer = fopen("points.txt", "r");
+    FILE *pointsFile = NULL;
+    FILE *orderedPairsFile = NULL;
+    FILE *gnuplotPointer = NULL;
     string line[MAX_LEN];
     double values[6] = {NULL};
     double coefficients[3] = {0};
-    int i = 0;
-    if (pointer == NULL) {
-        printf ("Unable to open file");
-    } else {
-        printf ("File opened successfully\n");
-        while (fgets(line[i], MAX_LEN - 1, pointer) != NULL){
-        	printf ("\n%s", line[i]);
+    
+    pointsFile = openFile("points.txt", "r");
+    system (LOCAL_DIR);
+    if (pointsFile){
+	int i = 0;
+    	while (fgets(line[i], MAX_LEN - 1, pointsFile) != NULL){
+    		char orderedPairsFileName[MAX_LEN] = "orderedPairs";
+    		char temp[MAX_LEN] = "\n";
+    		
         	iterateOverString(line, values, i);
         	double system[3][4] = {
 				{values[0] * values[0], values[0], 1, values[1]},
 				{values[2] * values[2], values[2], 1, values[3]},
 				{values[4] * values[4], values[4], 1, values[5]}
 			};
-			
-			
-			gaussElimination(system, coefficients);
-			for (int j = 0; j < 3; j++) {
-				printf ("%.6f ", coefficients[j]);
+			sprintf (temp, "%d", i);
+			strcat (orderedPairsFileName, temp);
+			strcat (orderedPairsFileName, ".txt");
+			orderedPairsFile = openFile(orderedPairsFileName, "w");
+			if (orderedPairsFile) {
+				for (int j = 0; j < 6; j++) {
+					fprintf (orderedPairsFile, "%.0f ", values[j]);
+					if (j % 2 != 0)	fprintf (orderedPairsFile, "\n");
+				}
+				fclose (orderedPairsFile);
 			}
-			printf ("\n");
+			gaussElimination(system, coefficients);	
+			
+			
+			gnuplotPointer = openPipe("gnuplot -persitent", "w");
+		    fprintf (gnuplotPointer, "set terminal png; set output \"eq%d.png\"\n", i+1);
+		    fprintf (gnuplotPointer, "set yrange [-50:10]\n");
+		    fprintf (gnuplotPointer, "set xrange [-100:100]\n");
+		    fprintf (gnuplotPointer, "f(x) = %f*x**2 + %f*x + %f\n", coefficients[0], coefficients[1], coefficients[2]);
+		    fprintf (gnuplotPointer, "plot f(x) title \"f(x)=%fx^2 + %fx + %f\",", coefficients[0], coefficients[1], coefficients[2]);
+		    fprintf (gnuplotPointer, "\"%s\" title \"%s\"\n", orderedPairsFileName, line[i]);
+		    fprintf (gnuplotPointer, "exit\n");
+		    fclose(gnuplotPointer);
 			clearVector(values);
 			i++;
 		}
-        fclose (pointer);
+	    fclose (pointsFile);
     }
     return 0;
 }
+
+
+
