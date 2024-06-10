@@ -2,12 +2,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <windows.h>
+
 #define MAX_LEN 500
 #define LOCAL_DIR "cd \"C:\\Users\\lfeli\\OneDrive\\Área de Trabalho\\PPE\""
 
 typedef char string[MAX_LEN];
 
+/* function: openFile 
+parameters: string name of file, string file opening type
+return: pointer to a file or NULL
+
+
+Try to open the received file
+*/
 FILE* openFile(const char* fileName, const char *openingType) {
     FILE *filePointer = fopen(fileName, openingType);
     if (filePointer == NULL) {
@@ -18,6 +25,14 @@ FILE* openFile(const char* fileName, const char *openingType) {
     return filePointer;
 }
 
+
+/* function: openPipe
+parameters: string name of file, string file opening type
+return: pointer to a file or NULL
+
+
+Try to open the received pipe
+*/
 FILE *openPipe (const char* pipeName, const char *openingType) {
     FILE *pipePointer = _popen(pipeName, openingType);
     if (pipePointer == NULL) {
@@ -107,6 +122,25 @@ void clearVector(double *values){
 	}
 }
 
+
+/* function: plot 
+parameters: pointer to a pipe, string, an integer index, an array of integer, name of the file
+return: void
+
+
+send gnuplot functions to the pipe, to plot the graphs 
+*/
+void plot (FILE *gnuplotPointer, string *line, int index, double *coefficients, const char *orderedPairsFileName) {
+	fprintf (gnuplotPointer, "set grid\n");
+	fprintf (gnuplotPointer, "set xrange[-40:40]\n");
+	fprintf (gnuplotPointer, "set terminal png; set output \"eq%d.png\"\n", index+1);
+    fprintf (gnuplotPointer, "f(x) = %f*x**2 + %f*x + %f\n", coefficients[0], coefficients[1], coefficients[2]);
+    fprintf (gnuplotPointer, "plot f(x) title \"f(x)=%fx^2 + %fx + %f\",", coefficients[0], coefficients[1], coefficients[2]);
+    fprintf (gnuplotPointer, "\"%s\" title \"%s\"\n", orderedPairsFileName, line[index]);
+    fprintf (gnuplotPointer, "exit\n");
+	
+}
+
 int main () {
     FILE *pointsFile = NULL;
     FILE *orderedPairsFile = NULL;
@@ -144,13 +178,7 @@ int main () {
 			
 			
 			gnuplotPointer = openPipe("gnuplot -persitent", "w");
-		    fprintf (gnuplotPointer, "set terminal png; set output \"eq%d.png\"\n", i+1);
-		    fprintf (gnuplotPointer, "set yrange [-50:10]\n");
-		    fprintf (gnuplotPointer, "set xrange [-100:100]\n");
-		    fprintf (gnuplotPointer, "f(x) = %f*x**2 + %f*x + %f\n", coefficients[0], coefficients[1], coefficients[2]);
-		    fprintf (gnuplotPointer, "plot f(x) title \"f(x)=%fx^2 + %fx + %f\",", coefficients[0], coefficients[1], coefficients[2]);
-		    fprintf (gnuplotPointer, "\"%s\" title \"%s\"\n", orderedPairsFileName, line[i]);
-		    fprintf (gnuplotPointer, "exit\n");
+		    plot(gnuplotPointer, line, i, coefficients, orderedPairsFileName);
 		    fclose(gnuplotPointer);
 			clearVector(values);
 			i++;
@@ -159,6 +187,3 @@ int main () {
     }
     return 0;
 }
-
-
-
